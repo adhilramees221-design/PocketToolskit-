@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Super Tools Box"
+version = "1.0.0"
+id = "artifacts/super-tools-box"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21658
+
+[services.development]
+run = "pnpm --filter @workspace/super-tools-box run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/super-tools-box", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/super-tools-box/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21658"
+BASE_PATH = "/"
