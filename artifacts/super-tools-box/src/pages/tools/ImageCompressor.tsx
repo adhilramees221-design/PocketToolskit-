@@ -9,7 +9,8 @@ const QUALITY_OPTIONS: {
   level: QualityLevel;
   label: string;
   description: string;
-  jpegQuality: number;
+  startQuality: number;   // initial JPEG quality attempt
+  minQuality: number;     // minimum JPEG quality floor
   maxDimension: number;
   color: string;
   activeClass: string;
@@ -17,9 +18,10 @@ const QUALITY_OPTIONS: {
   {
     level: "high",
     label: "High Quality",
-    description: "Best quality, slight size reduction",
-    jpegQuality: 0.85,
-    maxDimension: 2400,
+    description: "Best quality, good size reduction",
+    startQuality: 0.80,
+    minQuality: 0.55,
+    maxDimension: 1920,
     color: "text-emerald-600",
     activeClass: "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30",
   },
@@ -27,8 +29,9 @@ const QUALITY_OPTIONS: {
     level: "medium",
     label: "Medium Quality",
     description: "Balanced quality & file size",
-    jpegQuality: 0.60,
-    maxDimension: 1600,
+    startQuality: 0.55,
+    minQuality: 0.30,
+    maxDimension: 1280,
     color: "text-blue-600",
     activeClass: "border-blue-500 bg-blue-50 dark:bg-blue-950/30",
   },
@@ -36,12 +39,59 @@ const QUALITY_OPTIONS: {
     level: "low",
     label: "Low Quality",
     description: "Maximum compression, smallest size",
-    jpegQuality: 0.28,
-    maxDimension: 1000,
+    startQuality: 0.25,
+    minQuality: 0.10,
+    maxDimension: 800,
     color: "text-orange-600",
     activeClass: "border-orange-500 bg-orange-50 dark:bg-orange-950/30",
   },
 ];
+
+/** Decode base64 data-URL size back to approximate byte count */
+function dataUrlBytes(dataUrl: string): number {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const padding = (base64.match(/=+$/) || [""])[0].length;
+  return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+/**
+ * Compress dataUrl to JPEG. If the result is still larger than originalBytes,
+ * iteratively reduce quality by `step` until it is smaller or we hit minQuality.
+ */
+function smartCompress(
+  img: HTMLImageElement,
+  maxDimension: number,
+  startQuality: number,
+  minQuality: number,
+  originalBytes: number
+): string {
+  // Scale dimensions
+  let { width, height } = img;
+  if (width > height && width > maxDimension) {
+    height = Math.round((height * maxDimension) / width);
+    width = maxDimension;
+  } else if (height > maxDimension) {
+    width = Math.round((width * maxDimension) / height);
+    height = maxDimension;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0, width, height);
+
+  let quality = startQuality;
+  let result = canvas.toDataURL("image/jpeg", quality);
+
+  // Iteratively reduce quality until output < original or we hit the floor
+  while (dataUrlBytes(result) >= originalBytes && quality > minQuality) {
+    quality = Math.max(quality - 0.07, minQuality);
+    result = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  return result;
+}
 
 export default function ImageCompressor() {
   const [image, setImage] = useState<string | null>(null);
@@ -59,35 +109,21 @@ export default function ImageCompressor() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  const compressImage = (dataUrl: string, level: QualityLevel) => {
-    const option = QUALITY_OPTIONS.find((o) => o.level === level)!;
+  const runCompression = (dataUrl: string, level: QualityLevel, origBytes: number) => {
+    const opt = QUALITY_OPTIONS.find((o) => o.level === level)!;
     setIsCompressing(true);
 
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      let { width, height } = img;
-
-      const max = option.maxDimension;
-      if (width > height && width > max) {
-        height = Math.round((height * max) / width);
-        width = max;
-      } else if (height > max) {
-        width = Math.round((width * max) / height);
-        height = max;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0, width, height);
-
-      const compressedDataUrl = canvas.toDataURL("image/jpeg", option.jpegQuality);
-      setCompressed(compressedDataUrl);
-
-      const head = "data:image/jpeg;base64,";
-      const size = Math.round(((compressedDataUrl.length - head.length) * 3) / 4);
-      setCompressedSize(size);
+      const result = smartCompress(
+        img,
+        opt.maxDimension,
+        opt.startQuality,
+        opt.minQuality,
+        origBytes
+      );
+      setCompressed(result);
+      setCompressedSize(dataUrlBytes(result));
       setIsCompressing(false);
     };
     img.src = dataUrl;
@@ -96,21 +132,31 @@ export default function ImageCompressor() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setOriginalSize(file.size);
+    const origBytes = file.size;
+    setOriginalSize(origBytes);
     setCompressed(null);
+    setCompressedSize(0);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
       setImage(dataUrl);
-      compressImage(dataUrl, qualityLevel);
+      runCompression(dataUrl, qualityLevel, origBytes);
     };
     reader.readAsDataURL(file);
   };
 
   const handleQualitySelect = (level: QualityLevel) => {
     setQualityLevel(level);
-    if (image) compressImage(image, level);
+    if (image && originalSize > 0) runCompression(image, level, originalSize);
+  };
+
+  const handleReset = () => {
+    setImage(null);
+    setCompressed(null);
+    setOriginalSize(0);
+    setCompressedSize(0);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const downloadImage = () => {
@@ -124,7 +170,8 @@ export default function ImageCompressor() {
   };
 
   const savedBytes = originalSize - compressedSize;
-  const savedPercent = originalSize > 0 ? Math.round((savedBytes / originalSize) * 100) : 0;
+  const savedPercent =
+    originalSize > 0 ? Math.round((savedBytes / originalSize) * 100) : 0;
 
   return (
     <ToolLayout
@@ -132,15 +179,20 @@ export default function ImageCompressor() {
       instructions={
         <ul className="list-disc pl-5 space-y-1">
           <li>Upload any image (JPEG, PNG, WebP).</li>
-          <li>Choose a quality level: High keeps the best quality, Medium balances quality and size, Low gives the smallest file.</li>
-          <li>The compressed image and its new file size are shown instantly.</li>
-          <li>Click Download to save the compressed image as a JPEG.</li>
-          <li>All processing happens in your browser — no data is sent to any server.</li>
+          <li>
+            Choose a quality level: <strong>High</strong> keeps great quality
+            with good size reduction, <strong>Medium</strong> balances quality
+            and file size, <strong>Low</strong> gives the smallest possible
+            file.
+          </li>
+          <li>The compressed size is shown instantly — switch quality anytime.</li>
+          <li>Click <strong>Download</strong> to save as JPEG.</li>
+          <li>All processing happens in your browser — no data leaves your device.</li>
         </ul>
       }
     >
       <div className="space-y-8">
-        {/* Upload area */}
+        {/* ── Upload drop zone ── */}
         {!image ? (
           <div
             onClick={() => fileInputRef.current?.click()}
@@ -151,12 +203,14 @@ export default function ImageCompressor() {
             </div>
             <div>
               <p className="font-semibold text-lg">Click or drag image to upload</p>
-              <p className="text-sm text-muted-foreground mt-1">Supports JPG, PNG, WebP</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Supports JPG, PNG, WebP
+              </p>
             </div>
           </div>
         ) : (
           <>
-            {/* Quality selector — shown after upload */}
+            {/* ── Quality selector ── */}
             <div className="space-y-3">
               <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                 Select Quality
@@ -169,14 +223,19 @@ export default function ImageCompressor() {
                       key={opt.level}
                       onClick={() => handleQualitySelect(opt.level)}
                       className={`relative flex flex-col items-center gap-1.5 rounded-xl border-2 p-4 text-center transition-all focus:outline-none
-                        ${isActive ? opt.activeClass + " shadow-sm" : "border-border bg-card hover:border-muted-foreground/40"}`}
+                        ${isActive
+                          ? opt.activeClass + " shadow-sm"
+                          : "border-border bg-card hover:border-muted-foreground/40"
+                        }`}
                     >
                       {isActive && (
                         <CheckCircle2
                           className={`absolute top-2 right-2 h-4 w-4 ${opt.color}`}
                         />
                       )}
-                      <span className={`font-bold text-sm ${isActive ? opt.color : ""}`}>
+                      <span
+                        className={`font-bold text-sm ${isActive ? opt.color : ""}`}
+                      >
                         {opt.label}
                       </span>
                       <span className="text-xs text-muted-foreground leading-tight">
@@ -188,20 +247,30 @@ export default function ImageCompressor() {
               </div>
             </div>
 
-            {/* Before / After preview */}
+            {/* ── Before / After preview ── */}
             <div className="grid md:grid-cols-2 gap-6">
+              {/* Original */}
               <div className="space-y-3">
-                <h3 className="font-medium text-muted-foreground text-sm">Original</h3>
+                <h3 className="font-medium text-muted-foreground text-sm">
+                  Original
+                </h3>
                 <div className="aspect-video rounded-xl overflow-hidden border bg-muted flex items-center justify-center">
-                  <img src={image} alt="Original" className="object-contain w-full h-full" />
+                  <img
+                    src={image}
+                    alt="Original"
+                    className="object-contain w-full h-full"
+                  />
                 </div>
-                <p className="text-sm font-medium text-center">{formatSize(originalSize)}</p>
+                <p className="text-sm font-medium text-center">
+                  {formatSize(originalSize)}
+                </p>
               </div>
 
+              {/* Compressed */}
               <div className="space-y-3">
                 <h3 className="font-medium text-muted-foreground text-sm flex items-center justify-between">
                   <span>Compressed</span>
-                  {compressedSize > 0 && (
+                  {compressedSize > 0 && !isCompressing && (
                     <span className="text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full text-xs font-bold">
                       -{savedPercent}% saved
                     </span>
@@ -209,14 +278,24 @@ export default function ImageCompressor() {
                 </h3>
                 <div className="aspect-video rounded-xl overflow-hidden border bg-muted flex items-center justify-center">
                   {isCompressing ? (
-                    <p className="text-sm text-muted-foreground animate-pulse">Compressing…</p>
+                    <p className="text-sm text-muted-foreground animate-pulse">
+                      Compressing…
+                    </p>
                   ) : (
-                    compressed && <img src={compressed} alt="Compressed" className="object-contain w-full h-full" />
+                    compressed && (
+                      <img
+                        src={compressed}
+                        alt="Compressed"
+                        className="object-contain w-full h-full"
+                      />
+                    )
                   )}
                 </div>
-                {compressedSize > 0 && (
+                {compressedSize > 0 && !isCompressing && (
                   <div className="text-center">
-                    <p className="text-sm font-bold text-primary">{formatSize(compressedSize)}</p>
+                    <p className="text-sm font-bold text-primary">
+                      {formatSize(compressedSize)}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Saved {formatSize(savedBytes)}
                     </p>
@@ -225,18 +304,12 @@ export default function ImageCompressor() {
               </div>
             </div>
 
-            {/* Action buttons */}
+            {/* ── Action buttons ── */}
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => {
-                  setImage(null);
-                  setCompressed(null);
-                  setOriginalSize(0);
-                  setCompressedSize(0);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
+                onClick={handleReset}
               >
                 <Upload className="h-4 w-4 mr-2" /> Upload New Image
               </Button>
