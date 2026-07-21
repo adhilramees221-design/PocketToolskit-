@@ -1,0 +1,8 @@
+{
+  "env": {
+    "PORT": "3000"
+  },
+  "rewrites": [
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}
