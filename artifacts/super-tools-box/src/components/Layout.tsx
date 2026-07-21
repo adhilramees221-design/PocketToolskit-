@@ -32,7 +32,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
             <span className="text-2xl">🚀</span>
-            <span className="hidden sm:inline-block tracking-tight">Super Tools Box</span>
+            <span className="hidden sm:inline-block tracking-tight">PocketToolskit</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-6">

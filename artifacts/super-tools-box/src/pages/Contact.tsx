@@ -48,7 +48,7 @@ export default function Contact() {
             <div className="text-4xl mb-4">🚀</div>
             <h3 className="text-xl font-bold mb-2">Build Better Tools</h3>
             <p className="text-muted-foreground text-sm">
-              We are constantly looking to improve Super Tools Box. Your feedback helps us make it better for everyone.
+              We are constantly looking to improve PocketToolskit. Your feedback helps us make it better for everyone.
             </p>
           </div>
         </div>

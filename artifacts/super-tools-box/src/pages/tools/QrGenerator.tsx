@@ -128,7 +128,7 @@ export default function QrGenerator() {
               </p>
             )}
             <QRCodeSVG
-              value={text || "https://supertoolsbox.com"}
+              value={text || "https://pockettoolskit.com"}
               size={240}
               fgColor={color}
               level="H"

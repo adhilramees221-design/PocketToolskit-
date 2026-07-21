@@ -29,7 +29,7 @@ export default function Privacy() {
           
           <h3>Data Processing</h3>
           <p>
-            All tools provided by Super Tools Box operate entirely client-side. This means that when you compress an image, generate a PDF, or calculate something, the processing happens directly on your device's browser. No data is sent to any external server.
+            All tools provided by PocketToolskit operate entirely client-side. This means that when you compress an image, generate a PDF, or calculate something, the processing happens directly on your device's browser. No data is sent to any external server.
           </p>
           
           <h3>Local Storage</h3>

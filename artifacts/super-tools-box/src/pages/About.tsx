@@ -24,10 +24,10 @@ export default function About() {
         
         <div className="prose dark:prose-invert max-w-none space-y-6">
           <p className="text-lg">
-            Super Tools Box is a premium collection of browser-based utilities designed for speed, privacy, and ease of use.
+            PocketToolskit is a premium collection of browser-based utilities designed for speed, privacy, and ease of use.
           </p>
           <p>
-            Unlike many online tools that upload your files, images, or data to a remote server, every tool in the Super Tools Box runs 100% locally in your browser. This means zero server logs, zero data collection, and instant results.
+            Unlike many online tools that upload your files, images, or data to a remote server, every tool in the PocketToolskit runs 100% locally in your browser. This means zero server logs, zero data collection, and instant results.
           </p>
           <h3>Our Philosophy</h3>
           <ul>
