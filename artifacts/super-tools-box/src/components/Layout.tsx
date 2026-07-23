@@ -31,8 +31,8 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
-            <span className="text-2xl">🚀</span>
-            <span className="hidden sm:inline-block tracking-tight">PocketToolskit</span>
+            <img src="/logo.png" alt="Pocket Tools Kit Logo" className="h-9 w-auto object-contain" />
+            <span className="hidden sm:inline-block tracking-tight">Pocket Tools Kit</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-6">
