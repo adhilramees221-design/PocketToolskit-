@@ -8,21 +8,20 @@ import {
   Calculator, 
   Type, 
   Calendar, 
-  Gauge 
+  Gauge,
+  MessageCircle,
+  Sparkles,
+  Volume2,
+  Receipt,
+  FilePlus2
 } from "lucide-react";
 
 export type ToolCategory = "Media" | "Utilities" | "Documents" | "Security" | "Calculators";
 
 export interface ToolItem {
   id: string;
-  title: {
-    en: string;
-    ml: string;
-  };
-  description: {
-    en: string;
-    ml: string;
-  };
+  title: { en: string; ml: string };
+  description: { en: string; ml: string };
   category: ToolCategory;
   icon: any;
   color: string;
@@ -63,8 +62,8 @@ export const toolsData: ToolItem[] = [
   },
   {
     id: "qr-code",
-    title: { en: "QR Code Generator", ml: "ക്യുആർ കോഡ് ജനറേറ്റർ" },
-    description: { en: "Create custom QR codes for links and text.", ml: "ലിങ്കുകൾക്കും ടെക്സ്റ്റിനുമായി ക്യുആർ കോഡുകൾ നിർമ്മിക്കുക." },
+    title: { en: "QR Code Generator & Scanner", ml: "ക്യുആർ കോഡ് ജനറേറ്റർ & സ്കാനർ" },
+    description: { en: "Create QR codes and scan them with camera or image upload.", ml: "ക്യുആർ കോഡ് ഉണ്ടാക്കുകയും ക്യാമറ അല്ലെങ്കിൽ ഇമേജ് വഴി സ്കാൻ ചെയ്യുകയും ചെയ്യുക." },
     category: "Utilities",
     icon: QrCode,
     color: "bg-purple-500",
@@ -108,5 +107,46 @@ export const toolsData: ToolItem[] = [
     category: "Utilities",
     icon: Gauge,
     color: "bg-yellow-500",
-  }
+  },
+  // ── New Tools ──
+  {
+    id: "wa-chat",
+    title: { en: "WhatsApp Direct Chat", ml: "വാട്സ്ആപ്പ് ഡയറക്ട് ചാറ്റ്" },
+    description: { en: "Open a WhatsApp chat without saving the number to contacts.", ml: "നമ്പർ സേവ് ചെയ്യാതെ WhatsApp-ൽ ചാറ്റ് ചെയ്യുക." },
+    category: "Utilities",
+    icon: MessageCircle,
+    color: "bg-green-500",
+  },
+  {
+    id: "fancy-font",
+    title: { en: "Fancy Font Generator", ml: "ഫാൻസി ഫോൺ്ട് ജനറേറ്റർ" },
+    description: { en: "Convert text into 12+ stylish Unicode fonts for social media.", ml: "ടെക്സ്റ്റ് 12+ സ്റ്റൈലിഷ് ഫോൺ്ടുകളിലേക്ക് മാറ്റി കോപ്പി ചെയ്യുക." },
+    category: "Utilities",
+    icon: Sparkles,
+    color: "bg-fuchsia-500",
+  },
+  {
+    id: "tts",
+    title: { en: "Text to Speech", ml: "ടെക്സ്റ്റ് ടു സ്പീച്ച്" },
+    description: { en: "Convert any text to voice audio using your browser.", ml: "ഏത് ടെക്സ്റ്റും ബ്രൗസർ വഴി ശബ്‌ദമാക്കി കേൾക്കുക." },
+    category: "Utilities",
+    icon: Volume2,
+    color: "bg-amber-500",
+  },
+  {
+    id: "gst-calc",
+    title: { en: "GST & Discount Calculator", ml: "ജിഎസ്ടി & ഡിസ്കൗണ്ട് കാൽക്കുലേറ്റർ" },
+    description: { en: "Calculate GST, CGST, SGST and discounts instantly.", ml: "GST, CGST, SGST, ഡിസ്കൗണ്ട് തൽക്ഷണം കണക്കാക്കുക." },
+    category: "Calculators",
+    icon: Receipt,
+    color: "bg-teal-500",
+  },
+  {
+    id: "pdf-merge",
+    title: { en: "PDF Merger", ml: "PDF മർജർ" },
+    description: { en: "Merge multiple PDF files into one — runs entirely in your browser.", ml: "ഒന്നിലധികം PDF ഒന്നിച്ച് ചേർക്കുക — ഫയലുകൾ ഒരിടത്തും അപ്‌ലോഡ് ചെയ്യില്ല." },
+    category: "Documents",
+    icon: FilePlus2,
+    color: "bg-rose-500",
+  },
 ];

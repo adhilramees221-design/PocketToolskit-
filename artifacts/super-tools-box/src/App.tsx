@@ -12,7 +12,7 @@ import About from '@/pages/About';
 import Privacy from '@/pages/Privacy';
 import Contact from '@/pages/Contact';
 
-// Tools
+// Original Tools
 import ImageCompressor from '@/pages/tools/ImageCompressor';
 import YoutubeThumbnail from '@/pages/tools/YoutubeThumbnail';
 import PdfConverter from '@/pages/tools/PdfConverter';
@@ -23,6 +23,13 @@ import EmiCalculator from '@/pages/tools/EmiCalculator';
 import TextCounter from '@/pages/tools/TextCounter';
 import AgeCalculator from '@/pages/tools/AgeCalculator';
 import SpeedTester from '@/pages/tools/SpeedTester';
+
+// New Tools
+import WhatsAppChat from '@/pages/tools/WhatsAppChat';
+import FancyFont from '@/pages/tools/FancyFont';
+import TextToSpeech from '@/pages/tools/TextToSpeech';
+import GstCalculator from '@/pages/tools/GstCalculator';
+import PdfMerger from '@/pages/tools/PdfMerger';
 
 const queryClient = new QueryClient();
 
@@ -35,8 +42,8 @@ function Router() {
         <Route path="/privacy" component={Privacy} />
         <Route path="/contact" component={Contact} />
         <Route path="/tools" component={Home} />
-        
-        {/* Tool Routes */}
+
+        {/* Original Tool Routes */}
         <Route path="/tools/img-comp" component={ImageCompressor} />
         <Route path="/tools/yt-thumb" component={YoutubeThumbnail} />
         <Route path="/tools/pdf-conv" component={PdfConverter} />
@@ -47,6 +54,13 @@ function Router() {
         <Route path="/tools/text-cnt" component={TextCounter} />
         <Route path="/tools/age-calc" component={AgeCalculator} />
         <Route path="/tools/speed-tst" component={SpeedTester} />
+
+        {/* New Tool Routes */}
+        <Route path="/tools/wa-chat" component={WhatsAppChat} />
+        <Route path="/tools/fancy-font" component={FancyFont} />
+        <Route path="/tools/tts" component={TextToSpeech} />
+        <Route path="/tools/gst-calc" component={GstCalculator} />
+        <Route path="/tools/pdf-merge" component={PdfMerger} />
 
         <Route component={NotFound} />
       </Switch>
