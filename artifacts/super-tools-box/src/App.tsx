@@ -31,6 +31,22 @@ import TextToSpeech from '@/pages/tools/TextToSpeech';
 import GstCalculator from '@/pages/tools/GstCalculator';
 import PdfMerger from '@/pages/tools/PdfMerger';
 
+// Batch 3 Tools
+import IdMasker from '@/pages/tools/IdMasker';
+import UpiQrGenerator from '@/pages/tools/UpiQrGenerator';
+import InvoiceGenerator from '@/pages/tools/InvoiceGenerator';
+import FreelanceRateCalc from '@/pages/tools/FreelanceRateCalc';
+import ImageConverter from '@/pages/tools/ImageConverter';
+import DataEstimator from '@/pages/tools/DataEstimator';
+import PercentageCalc from '@/pages/tools/PercentageCalc';
+import QuickNotes from '@/pages/tools/QuickNotes';
+import DateDiffCalc from '@/pages/tools/DateDiffCalc';
+import BioLinkGenerator from '@/pages/tools/BioLinkGenerator';
+import FoodSpinner from '@/pages/tools/FoodSpinner';
+import BillWheel from '@/pages/tools/BillWheel';
+import FlagScore from '@/pages/tools/FlagScore';
+import OttCalc from '@/pages/tools/OttCalc';
+
 const queryClient = new QueryClient();
 
 function Router() {
@@ -61,6 +77,22 @@ function Router() {
         <Route path="/tools/tts" component={TextToSpeech} />
         <Route path="/tools/gst-calc" component={GstCalculator} />
         <Route path="/tools/pdf-merge" component={PdfMerger} />
+
+        {/* Batch 3 Tool Routes */}
+        <Route path="/tools/id-mask" component={IdMasker} />
+        <Route path="/tools/upi-qr" component={UpiQrGenerator} />
+        <Route path="/tools/invoice" component={InvoiceGenerator} />
+        <Route path="/tools/fl-rate" component={FreelanceRateCalc} />
+        <Route path="/tools/img-conv" component={ImageConverter} />
+        <Route path="/tools/data-est" component={DataEstimator} />
+        <Route path="/tools/pct-calc" component={PercentageCalc} />
+        <Route path="/tools/quick-note" component={QuickNotes} />
+        <Route path="/tools/date-diff" component={DateDiffCalc} />
+        <Route path="/tools/bio-link" component={BioLinkGenerator} />
+        <Route path="/tools/food-spin" component={FoodSpinner} />
+        <Route path="/tools/bill-wheel" component={BillWheel} />
+        <Route path="/tools/flag-score" component={FlagScore} />
+        <Route path="/tools/ott-calc" component={OttCalc} />
 
         <Route component={NotFound} />
       </Switch>
