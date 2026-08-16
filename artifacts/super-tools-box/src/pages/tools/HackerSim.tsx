@@ -76,51 +76,79 @@ function fmt(line: string) {
 }
 
 // ─── Shared audio + TTS sequence ─────────────────────────────────────────────
+// Returns a cancel function. Must be called from inside a user gesture:
+// both audio elements are unlocked synchronously within the gesture so the
+// delayed threat playback + TTS aren't blocked by autoplay policies.
 function runPrankSequence(base: string, name: string, refs: {
   typing: React.MutableRefObject<HTMLAudioElement | null>;
   threat: React.MutableRefObject<HTMLAudioElement | null>;
-}) {
+}): () => void {
   window.speechSynthesis?.cancel();
 
-  // Step 1 — typing sound for 5 seconds
+  const timers: number[] = [];
+  let cancelled = false;
+
+  // Step 1 — typing sound (starts inside the gesture)
   const typing = new Audio(`${base}sounds/typing.mp3`);
   typing.loop  = true;
   typing.volume = 0.72;
   refs.typing.current = typing;
   typing.play().catch(() => {});
 
-  // Step 2 — after 5s: stop typing, play threat
-  setTimeout(() => {
+  // Pre-create + unlock the threat audio inside the same gesture
+  // (muted play → pause counts as gesture activation for this element)
+  const threat = new Audio(`${base}sounds/threat.mp3`);
+  threat.volume = 0.9;
+  refs.threat.current = threat;
+  threat.muted = true;
+  threat.play().then(() => {
+    threat.pause();
+    threat.currentTime = 0;
+    threat.muted = false;
+  }).catch(() => { threat.muted = false; });
+
+  // Unlock speech synthesis inside the gesture with a silent utterance
+  if (window.speechSynthesis) {
+    const warm = new SpeechSynthesisUtterance(" ");
+    warm.volume = 0;
+    window.speechSynthesis.speak(warm);
+  }
+
+  let ttsPlayed = false;
+  const playTTS = () => {
+    if (cancelled || ttsPlayed) return;
+    ttsPlayed = true;
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(
+      `Your system has been hacked by ${name}. All photos and videos accessed.`
+    );
+    utter.rate   = 0.82;
+    utter.pitch  = 0.7;
+    utter.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const pick = voices.find(v => v.lang.startsWith("en") && /david|alex|google uk|google us/i.test(v.name));
+    if (pick) utter.voice = pick;
+    window.speechSynthesis.speak(utter);
+  };
+
+  // Step 2 — after 5s: stop typing, play threat; Step 3 — TTS after threat
+  timers.push(window.setTimeout(() => {
+    if (cancelled) return;
     typing.pause();
     typing.currentTime = 0;
-
-    const threat = new Audio(`${base}sounds/threat.mp3`);
-    threat.volume = 0.9;
-    refs.threat.current = threat;
     threat.play().catch(() => {});
-
-    // Step 3 — TTS after threat audio ends (with 12s hard-cap fallback)
-    let ttsPlayed = false;
-    const playTTS = () => {
-      if (ttsPlayed) return;
-      ttsPlayed = true;
-      if (!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(
-        `Your system has been hacked by ${name}. All photos and videos accessed.`
-      );
-      utter.rate   = 0.82;
-      utter.pitch  = 0.7;
-      utter.volume = 1.0;
-      const voices = window.speechSynthesis.getVoices();
-      const pick = voices.find(v => v.lang.startsWith("en") && /david|alex|google uk|google us/i.test(v.name));
-      if (pick) utter.voice = pick;
-      window.speechSynthesis.speak(utter);
-    };
-
     threat.addEventListener("ended", playTTS, { once: true });
-    setTimeout(playTTS, 12000); // fallback if audio doesn't fire ended
-  }, 5000);
+    timers.push(window.setTimeout(playTTS, 12000)); // fallback if 'ended' never fires
+  }, 5000));
+
+  return () => {
+    cancelled = true;
+    timers.forEach(clearTimeout);
+    typing.pause();
+    threat.pause();
+    window.speechSynthesis?.cancel();
+  };
 }
 
 // ─── CSS animations ───────────────────────────────────────────────────────────
@@ -183,41 +211,50 @@ export default function HackerSim() {
 // VICTIM VIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 function VictimView({ name }: { name: string }) {
+  const [entered, setEntered]   = useState(false);
   const [lines, setLines]       = useState<string[]>([]);
   const [glitch, setGlitch]     = useState(false);
-  const [showTap, setShowTap]   = useState(true);
   const [showAlert, setShowAlert] = useState(false);
   const [alertFading, setAlertFading] = useState(false);
   const termRef   = useRef<HTMLDivElement>(null);
   const lineIdx   = useRef(0);
   const typingRef = useRef<HTMLAudioElement | null>(null);
   const threatRef = useRef<HTMLAudioElement | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
   const started   = useRef(false);
   const base      = import.meta.env.BASE_URL ?? "/";
 
-  const startSequence = useCallback(() => {
+  const handleContinue = useCallback(() => {
     if (started.current) return;
     started.current = true;
-    setShowTap(false);
+    setEntered(true);
 
-    // Show alert popup
-    setShowAlert(true);
-    setTimeout(() => setAlertFading(true),  3000);
-    setTimeout(() => { setShowAlert(false); setAlertFading(false); }, 3700);
+    // Show alert popup shortly after the hack screen appears
+    setTimeout(() => setShowAlert(true), 400);
+    setTimeout(() => setAlertFading(true),  3400);
+    setTimeout(() => { setShowAlert(false); setAlertFading(false); }, 4100);
 
-    runPrankSequence(base, name, { typing: typingRef, threat: threatRef });
+    // Audio starts inside this click — autoplay always allowed
+    cancelRef.current = runPrankSequence(base, name, { typing: typingRef, threat: threatRef });
   }, [base, name]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+      cancelRef.current?.();
+      typingRef.current?.pause();
+      threatRef.current?.pause();
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
 
-    // Auto-attempt (works on desktop; mobile needs tap)
-    setTimeout(() => startSequence(), 500);
+  // Hack animation runs only after Continue is pressed
+  useEffect(() => {
+    if (!entered) return;
 
-    // Glitch pulses
     const gl = setInterval(() => { setGlitch(true); setTimeout(() => setGlitch(false), 650); }, 2800);
 
-    // Fast line stream
     const addLine = () => {
       const l = fmt(HACK_LINES[lineIdx.current++ % HACK_LINES.length]);
       setLines(p => [...p.slice(-55), l]);
@@ -226,15 +263,44 @@ function VictimView({ name }: { name: string }) {
     addLine();
     const li = setInterval(addLine, 160);
 
-    return () => {
-      document.body.style.overflow = "";
-      clearInterval(gl);
-      clearInterval(li);
-      typingRef.current?.pause();
-      threatRef.current?.pause();
-      window.speechSynthesis?.cancel();
-    };
-  }, []);
+    return () => { clearInterval(gl); clearInterval(li); };
+  }, [entered]);
+
+  // ── Innocent blue landing screen ──
+  if (!entered) {
+    return (
+      <div style={{
+        position:"fixed", inset:0, zIndex:99999,
+        background:"linear-gradient(160deg,#1e3a8a 0%,#2563eb 55%,#3b82f6 100%)",
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+        fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+        padding:"24px", textAlign:"center",
+      }}>
+        <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, marginBottom:20 }}>
+          🔗
+        </div>
+        <div style={{ color:"#fff", fontSize:"clamp(18px,5vw,24px)", fontWeight:700, marginBottom:8 }}>
+          You've received a link
+        </div>
+        <div style={{ color:"rgba(255,255,255,0.75)", fontSize:14, marginBottom:32, maxWidth:320 }}>
+          Tap continue to open the shared content
+        </div>
+        <button
+          onClick={handleContinue}
+          style={{
+            background:"#ffffff", color:"#1d4ed8", border:"none", borderRadius:999,
+            padding:"14px 56px", fontSize:17, fontWeight:700, cursor:"pointer",
+            boxShadow:"0 8px 24px rgba(0,0,0,0.25)",
+          }}
+        >
+          Continue
+        </button>
+        <div style={{ position:"absolute", bottom:14, color:"rgba(255,255,255,0.4)", fontSize:11, letterSpacing:"1px" }}>
+          Pocket Tools Kit
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -242,8 +308,6 @@ function VictimView({ name }: { name: string }) {
       <div
         className={glitch ? "glitch-anim victim-bg" : "victim-bg"}
         style={{ position: "fixed", inset: 0, zIndex: 99999, color: "#ff3c3c", fontFamily: "monospace", overflow: "hidden" }}
-        onClick={startSequence}
-        onTouchStart={startSequence}
       >
         {/* Matrix rain */}
         <MatrixRain color="#ff2200" opacity={0.26} speed={40} />
@@ -253,15 +317,6 @@ function VictimView({ name }: { name: string }) {
 
         {/* Vignette */}
         <div style={{ position:"absolute", inset:0, zIndex:1, pointerEvents:"none", background:"radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.78) 100%)" }} />
-
-        {/* Tap overlay */}
-        {showTap && (
-          <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.55)" }}>
-            <div style={{ textAlign:"center", color:"#ff3c3c", fontFamily:"monospace", animation:"blink 1s step-end infinite", fontSize:"clamp(15px,4vw,22px)", letterSpacing:"3px" }}>
-              ◉ TAP ANYWHERE TO CONTINUE
-            </div>
-          </div>
-        )}
 
         {/* Red alert popup */}
         {showAlert && (
@@ -346,7 +401,8 @@ function SimulatorView() {
   const lastAdd    = useRef(0);
   const typingRef  = useRef<HTMLAudioElement | null>(null);
   const threatRef  = useRef<HTMLAudioElement | null>(null);
-  const testRunning = useRef(false);
+  const cancelSeqRef = useRef<(() => void) | null>(null);
+  const alertTimers  = useRef<number[]>([]);
 
   const base = import.meta.env.BASE_URL ?? "/";
   const t = THEMES[theme];
@@ -384,6 +440,16 @@ function SimulatorView() {
     return () => { if (autoRef.current) clearInterval(autoRef.current); };
   }, [autoHack, addLine]);
 
+  // Cleanup on unmount: stop any running prank sequence + timers
+  useEffect(() => () => {
+    cancelSeqRef.current?.();
+    alertTimers.current.forEach(clearTimeout);
+    typingRef.current?.pause();
+    threatRef.current?.pause();
+    window.speechSynthesis?.cancel();
+    audioCtxRef.current?.close().catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!modal) return;
     const a = setTimeout(() => setModalFading(true), 2500);
@@ -406,24 +472,24 @@ function SimulatorView() {
   };
 
   const testPrank = () => {
-    if (testRunning.current) return;
-    testRunning.current = true;
     ensureCtx();
     const name = hackerName.trim() || "ANONYMOUS";
 
-    // Show red alert popup
+    // Cancel any previous sequence (timers + audio + TTS) before starting anew
+    cancelSeqRef.current?.();
+    cancelSeqRef.current = null;
+
+    // Show red alert popup (reset timers if re-clicked)
+    alertTimers.current.forEach(clearTimeout);
     setTestAlert(true);
     setTestAlertFading(false);
-    setTimeout(() => setTestAlertFading(true), 3000);
-    setTimeout(() => { setTestAlert(false); setTestAlertFading(false); testRunning.current = false; }, 3700);
-
-    // Stop any running audio
-    typingRef.current?.pause();
-    threatRef.current?.pause();
-    window.speechSynthesis?.cancel();
+    alertTimers.current = [
+      window.setTimeout(() => setTestAlertFading(true), 3000),
+      window.setTimeout(() => { setTestAlert(false); setTestAlertFading(false); }, 3700),
+    ];
 
     if (!muted) {
-      runPrankSequence(base, name, { typing: typingRef, threat: threatRef });
+      cancelSeqRef.current = runPrankSequence(base, name, { typing: typingRef, threat: threatRef });
     }
     setLines(p => [...p.slice(-60), `> [TEST] Prank sequence started for "${name}"`]);
     setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 8);

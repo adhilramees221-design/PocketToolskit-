@@ -23,6 +23,54 @@ export function SpinWheel({ items, spinning, targetIndex, onSpinComplete, size =
   const targetRotRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const durationRef = useRef(4000);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const lastSegRef = useRef(-1);
+
+  const getCtx = () => {
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch { return null; }
+    }
+    if (audioCtxRef.current?.state === "suspended") audioCtxRef.current.resume().catch(() => {});
+    return audioCtxRef.current;
+  };
+
+  // Short "tick" as each segment passes the pointer
+  const playTick = () => {
+    const ctx = getCtx();
+    if (!ctx) return;
+    try {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "triangle";
+      o.frequency.value = 900;
+      g.gain.setValueAtTime(0.09, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.05);
+    } catch {}
+  };
+
+  // Celebratory ding when the wheel lands
+  const playWin = () => {
+    const ctx = getCtx();
+    if (!ctx) return;
+    try {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = f;
+        const t0 = ctx.currentTime + i * 0.11;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.34);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0); o.stop(t0 + 0.36);
+      });
+    } catch {}
+  };
 
   const draw = (rot: number) => {
     const canvas = canvasRef.current;
@@ -123,6 +171,12 @@ export function SpinWheel({ items, spinning, targetIndex, onSpinComplete, size =
     draw(rotRef.current);
   }, [items, size]);
 
+  // Close the audio context on unmount
+  useEffect(() => () => {
+    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
+  }, []);
+
   // Spin animation
   useEffect(() => {
     if (!spinning || targetIndex === null || items.length === 0) return;
@@ -149,6 +203,9 @@ export function SpinWheel({ items, spinning, targetIndex, onSpinComplete, size =
     // Ease-out quartic
     const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
 
+    getCtx(); // unlock audio inside the user-gesture-triggered spin
+    lastSegRef.current = 0;
+
     const animate = (ts: number) => {
       if (!startTimeRef.current) startTimeRef.current = ts;
       const elapsed = ts - startTimeRef.current;
@@ -157,9 +214,22 @@ export function SpinWheel({ items, spinning, targetIndex, onSpinComplete, size =
       rotRef.current = angle;
       draw(angle);
 
+      // Tick for every segment boundary crossed since the last frame
+      const passed = Math.floor((angle - startRotRef.current) / arcSize);
+      if (passed > lastSegRef.current) {
+        const crossings = Math.min(passed - lastSegRef.current, 4); // cap ticks per frame
+        lastSegRef.current = passed;
+        const ctx = audioCtxRef.current;
+        for (let c = 0; c < crossings; c++) {
+          if (ctx && crossings > 1) setTimeout(playTick, c * (1000 / 60 / crossings));
+          else if (c === 0) playTick();
+        }
+      }
+
       if (progress < 1) {
         animRef.current = requestAnimationFrame(animate);
       } else {
+        playWin();
         onSpinComplete();
       }
     };
