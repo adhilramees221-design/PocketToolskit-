@@ -95,6 +95,7 @@ function Router() {
         <Route path="/tools/flag-score" component={FlagScore} />
         <Route path="/tools/ott-calc" component={OttCalc} />
         <Route path="/tools/hacker" component={HackerSim} />
+        <Route path="/tools/view" component={HackerSim} />
 
         <Route component={NotFound} />
       </Switch>
