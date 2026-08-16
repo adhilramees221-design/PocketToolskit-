@@ -46,6 +46,7 @@ import FoodSpinner from '@/pages/tools/FoodSpinner';
 import BillWheel from '@/pages/tools/BillWheel';
 import FlagScore from '@/pages/tools/FlagScore';
 import OttCalc from '@/pages/tools/OttCalc';
+import HackerSim from '@/pages/tools/HackerSim';
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ function Router() {
         <Route path="/tools/bill-wheel" component={BillWheel} />
         <Route path="/tools/flag-score" component={FlagScore} />
         <Route path="/tools/ott-calc" component={OttCalc} />
+        <Route path="/tools/hacker" component={HackerSim} />
 
         <Route component={NotFound} />
       </Switch>

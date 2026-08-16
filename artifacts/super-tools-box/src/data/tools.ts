@@ -27,7 +27,8 @@ import {
   Utensils,
   Users,
   Flag,
-  Tv
+  Tv,
+  Terminal
 } from "lucide-react";
 
 export type ToolCategory = "Media" | "Utilities" | "Documents" | "Security" | "Calculators";
@@ -276,5 +277,13 @@ export const toolsData: ToolItem[] = [
     category: "Calculators",
     icon: Tv,
     color: "bg-purple-600",
+  },
+  {
+    id: "hacker",
+    title: { en: "Fake Hacker Simulator & Prank Tool 💻", ml: "ഫേക്ക് ഹാക്കർ സിമുലേറ്റർ & പ്രാങ്ക് ടൂൾ 💻" },
+    description: { en: "Fake hacker terminal with matrix rain, prank link generator & ACCESS GRANTED effects.", ml: "Matrix rain, prank link, ACCESS GRANTED effects — friends-നെ ഞെട്ടിക്കൂ! 😈" },
+    category: "Utilities",
+    icon: Terminal,
+    color: "bg-emerald-700",
   },
 ];
