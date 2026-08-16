@@ -2,325 +2,236 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { ToolLayout } from "@/components/ToolLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Link2, Volume2, VolumeX, Maximize, Minimize, Zap, ZapOff } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Copy, Check, Link2, Volume2, VolumeX, Maximize, Minimize, Zap, ZapOff, Play } from "lucide-react";
 
-// ─── Hacker terminal lines ───────────────────────────────────────────────────
+// ─── Terminal lines ──────────────────────────────────────────────────────────
 const HACK_LINES = [
   "> Initializing exploit framework v4.2.0...",
   "> Loading payload modules [██████████] 100%",
-  "> Scanning target: 192.168.1.{rand}",
+  "> Scanning target: 192.168.{r}.{r}",
   "> Port scan complete: 22, 80, 443, 8080, 3306 OPEN",
-  "> CVE-2024-{rand4} vulnerability detected",
+  "> CVE-2024-{r4} zero-day vulnerability detected",
   "> Injecting SQL payload: ' OR 1=1; DROP TABLE users;--",
   "> Bypassing firewall rules... SUCCESS",
   "> Decrypting RSA-4096 private key...",
-  "  [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] DECRYPTED",
-  "> SSH brute-force: root:{rand6}... ACCESS GRANTED",
+  "  [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] DECRYPTED ✓",
+  "> SSH brute-force attack: root:{h6}... ACCESS GRANTED",
   "> Uploading reverse shell payload (4.2 KB)...",
-  "> Shell established on 192.168.1.{rand}:4444",
-  "> whoami",
-  "  root",
-  "> cat /etc/passwd | grep -v nologin",
-  "  root:x:0:0:root:/root:/bin/bash",
+  "> Shell established on 192.168.{r}.{r}:4444",
+  "> whoami → root",
   "> Extracting password hashes from /etc/shadow...",
-  "  $6$salt${rand6}XxYz... [CRACKING]",
-  "> Hashcat running at 98.4 GH/s...",
-  "> Password cracked: P@ssw0rd{rand4}!",
-  "> Pivoting to internal network 10.0.0.0/24...",
+  "  $6$salt${h6}XxYz... [CRACKING AT 98 GH/s]",
+  "> Password cracked: P@ssw0rd{r4}!",
   "> ARP spoofing initiated on subnet...",
   "> Intercepting HTTPS traffic (MitM active)...",
-  "> Extracting browser cookies from target...",
-  "  [session_id] a3f9c2e1d8b7...",
-  "  [auth_token] Bearer eyJhbGciOiJS...",
-  "> Accessing email account: victim@gmail.com",
-  "  Inbox: 2,847 messages downloaded",
-  "> Locating stored credentials in keychain...",
+  "> Browser cookies extracted [session_id]: a3f9c2e1...",
+  "> Email inbox downloaded: 2,847 messages ✓",
   "> Found 23 saved passwords — exporting...",
-  "> Installing persistence: /etc/cron.d/update",
-  "> Keylogger daemon started (PID: {rand4})",
-  "> Camera accessed — streaming 720p feed",
+  "> Keylogger daemon started (PID: {r4})",
+  "> Camera feed accessed — streaming 720p...",
   "> Microphone tapped — recording to /tmp/.audio",
   "> GPS coordinates: {gps}",
-  "> Exfiltrating {rand}GB of sensitive data...",
-  "  Upload speed: 128 MB/s → C2 server",
-  "> Scanning gallery: {rand4} photos found",
-  "> Scanning gallery: {rand4} videos found",
+  "> Scanning gallery: {r4} photos found",
+  "> Scanning gallery: {r4} videos found",
   "> Uploading photos & videos to remote server...",
-  "  [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] 100% COMPLETE",
-  "> Contacts exported: {rand4} entries",
-  "> WhatsApp messages cloned: {rand4} chats",
-  "> Encrypting disk with AES-256...",
+  "  [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] 100% UPLOADED ✓",
+  "> WhatsApp messages cloned: {r4} chats",
+  "> Contacts exported: {r4} entries",
+  "> AES-256 disk encryption started...",
   "  Files encrypted: 47,293 / 47,293 ✓",
-  "> Zero-day exploit deployed successfully",
-  "> System fully compromised ✓",
-  "python3 -c 'import socket,subprocess,os;s=socket.socket()'",
+  "> Wiping forensic traces: rm -rf /var/log/*",
+  "> Installing persistence: /etc/cron.d/update",
+  "> Zero-day exploit deployed — system OWNED ✓",
+  "python3 exploit.py --target {ip} --payload reverse_shell",
   "nmap -sS -O -p 1-65535 --script vuln {ip}",
-  "hydra -l admin -P /usr/share/wordlists/rockyou.txt ssh://{ip}",
-  "tcpdump -i eth0 -w capture.pcap &",
+  "hydra -l root -P rockyou.txt ssh://{ip}",
+  "tcpdump -i eth0 -w /tmp/capture.pcap &",
   "john --wordlist=passwords.txt hash.txt",
   "chmod +x rootkit.sh && ./rootkit.sh --silent",
-  "> ALERT: 2FA codes intercepted via SS7 attack",
-  "> ALERT: Cloud backup deleted from AWS S3",
-  "> Data breach complete. Exfiltration: SUCCESS",
-  "> Maintaining stealth... CPU usage: 0.1%",
-  "> Wiping forensic traces... [rm -rf /var/log/*]",
+  "> ALERT: 2FA intercepted via SS7 attack",
+  "> ALERT: Cloud backup deleted — recovery impossible",
+  "> Data exfiltration complete. 100% SUCCESS.",
+  "> Maintaining stealth... CPU: 0.1%",
 ];
 
-const MATRIX_CHARS = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ0123456789ABCDEF<>{}[]|/\\";
+const MATRIX_CHARS = "アイウエオカキクケコサシスセソタチツ0123456789ABCDEF<>{}[]|/\\!@#";
 
 const THEMES = {
-  green:  { primary: "#00ff41", dim: "#003b10", bg: "#0a0f0a", glow: "0 0 8px #00ff41, 0 0 20px #00ff41" },
-  cyan:   { primary: "#00e5ff", dim: "#00293d", bg: "#080d10", glow: "0 0 8px #00e5ff, 0 0 20px #00e5ff" },
-  red:    { primary: "#ff3c3c", dim: "#2a0000", bg: "#0f0505", glow: "0 0 8px #ff3c3c, 0 0 20px #ff3c3c" },
+  green: { primary: "#00ff41", dim: "#003b10", bg: "#090e09", glow: "0 0 8px #00ff41,0 0 20px #00ff41" },
+  cyan:  { primary: "#00e5ff", dim: "#00293d", bg: "#07090f", glow: "0 0 8px #00e5ff,0 0 20px #00e5ff" },
+  red:   { primary: "#ff3c3c", dim: "#2a0000", bg: "#0e0404", glow: "0 0 8px #ff3c3c,0 0 20px #ff3c3c" },
 };
 type Theme = keyof typeof THEMES;
 
-function rand(n = 999) { return Math.floor(Math.random() * n) + 1; }
-function randHex(len = 6) { return [...Array(len)].map(() => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join(""); }
-function formatLine(line: string): string {
+const r  = (n = 255) => Math.floor(Math.random() * n) + 1;
+const h6 = () => [...Array(6)].map(() => "0123456789abcdef"[~~(Math.random() * 16)]).join("");
+function fmt(line: string) {
   return line
-    .replace("{rand}", String(rand()))
-    .replace("{rand4}", String(rand(9999)).padStart(4, "0"))
-    .replace("{rand6}", randHex(6))
-    .replace("{ip}", `${rand(255)}.${rand(255)}.${rand(255)}.${rand(255)}`)
-    .replace("{gps}", `${(Math.random() * 180 - 90).toFixed(4)}°N ${(Math.random() * 360 - 180).toFixed(4)}°E`);
+    .replace(/{r}/g,  () => String(r()))
+    .replace(/{r4}/g, () => String(r(9999)).padStart(4, "0"))
+    .replace(/{h6}/g, h6)
+    .replace(/{ip}/g, () => `${r()}.${r()}.${r()}.${r()}`)
+    .replace(/{gps}/g, () => `${(Math.random()*180-90).toFixed(4)}°N ${(Math.random()*360-180).toFixed(4)}°E`);
 }
 
-// ─── Web Audio helpers ────────────────────────────────────────────────────────
-function createAudioCtx() {
-  return new (window.AudioContext || (window as any).webkitAudioContext)();
-}
-function playBeep(ctx: AudioContext, freq = 440, dur = 0.05, vol = 0.08) {
-  try {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.start(); osc.stop(ctx.currentTime + dur);
-  } catch {}
-}
-function playGranted(ctx: AudioContext) {
-  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playBeep(ctx, f, 0.18, 0.1), i * 100));
-}
-function playAlarmSynth(ctx: AudioContext) {
-  [880, 1320, 660, 1100].forEach((f, i) => setTimeout(() => playBeep(ctx, f, 0.2, 0.15), i * 150));
-}
+// ─── Shared audio + TTS sequence ─────────────────────────────────────────────
+function runPrankSequence(base: string, name: string, refs: {
+  typing: React.MutableRefObject<HTMLAudioElement | null>;
+  threat: React.MutableRefObject<HTMLAudioElement | null>;
+}) {
+  window.speechSynthesis?.cancel();
 
-// ─── Matrix Rain Canvas ───────────────────────────────────────────────────────
-function MatrixCanvas({ theme, active }: { theme: Theme; active: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const colsRef = useRef<number[]>([]);
-  const frameRef = useRef<number>(0);
-  useEffect(() => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const fontSize = 13;
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      colsRef.current = Array(Math.floor(canvas.width / fontSize)).fill(0);
+  // Step 1 — typing sound for 5 seconds
+  const typing = new Audio(`${base}sounds/typing.mp3`);
+  typing.loop  = true;
+  typing.volume = 0.72;
+  refs.typing.current = typing;
+  typing.play().catch(() => {});
+
+  // Step 2 — after 5s: stop typing, play threat
+  setTimeout(() => {
+    typing.pause();
+    typing.currentTime = 0;
+
+    const threat = new Audio(`${base}sounds/threat.mp3`);
+    threat.volume = 0.9;
+    refs.threat.current = threat;
+    threat.play().catch(() => {});
+
+    // Step 3 — TTS after threat audio ends (with 12s hard-cap fallback)
+    let ttsPlayed = false;
+    const playTTS = () => {
+      if (ttsPlayed) return;
+      ttsPlayed = true;
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(
+        `Your system has been hacked by ${name}. All photos and videos accessed.`
+      );
+      utter.rate   = 0.82;
+      utter.pitch  = 0.7;
+      utter.volume = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const pick = voices.find(v => v.lang.startsWith("en") && /david|alex|google uk|google us/i.test(v.name));
+      if (pick) utter.voice = pick;
+      window.speechSynthesis.speak(utter);
     };
-    resize();
-    window.addEventListener("resize", resize);
-    let last = 0;
-    const draw = (ts: number) => {
-      frameRef.current = requestAnimationFrame(draw);
-      if (!active) return;
-      if (ts - last < 55) return;
-      last = ts;
-      const t = THEMES[theme];
-      ctx.fillStyle = `${t.bg}cc`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = t.primary;
-      ctx.font = `${fontSize}px monospace`;
-      colsRef.current.forEach((y, i) => {
-        const ch = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        ctx.fillText(ch, i * fontSize, y * fontSize);
-        colsRef.current[i] = y > canvas.height / fontSize && Math.random() > 0.975 ? 0 : y + 1;
-      });
-    };
-    frameRef.current = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(frameRef.current); window.removeEventListener("resize", resize); };
-  }, [theme, active]);
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ opacity: 0.18 }} />;
+
+    threat.addEventListener("ended", playTTS, { once: true });
+    setTimeout(playTTS, 12000); // fallback if audio doesn't fire ended
+  }, 5000);
 }
 
-// ─── Glitch CSS (injected once) ───────────────────────────────────────────────
+// ─── CSS animations ───────────────────────────────────────────────────────────
 const STYLES = `
-@keyframes glitch2 {
-  0%,100%{ transform:translate(0) scaleX(1); opacity:1; }
-  10%{ transform:translate(4px,-1px) scaleX(1.02); opacity:.8; }
-  20%{ transform:translate(-4px,2px) scaleX(0.98); opacity:.9; }
-  30%{ transform:translate(2px,0) skewX(3deg); opacity:1; }
-  50%{ transform:translate(-1px,0) skewX(-2deg); }
-}
-@keyframes scanline { 0%{top:-10%} 100%{top:110%} }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes fadeInScale { 0%{opacity:0;transform:scale(0.7)} 100%{opacity:1;transform:scale(1)} }
-@keyframes fadeOut { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(0.8)} }
-@keyframes pulseGreen {
-  0%,100%{ box-shadow:0 0 20px #00ff41,0 0 60px #00ff41; }
-  50%{ box-shadow:0 0 40px #00ff41,0 0 100px #00ff41,inset 0 0 30px #00ff4122; }
-}
-@keyframes pulseRed {
-  0%,100%{ box-shadow:0 0 20px #ff3c3c,0 0 60px #ff3c3c; }
-  50%{ box-shadow:0 0 50px #ff3c3c,0 0 120px #ff3c3c,inset 0 0 30px #ff3c3c22; background:#1a0000; }
-}
-@keyframes victimGlitch {
-  0%,100%{ transform:translate(0) skewX(0); filter:none; }
-  5%{ transform:translate(-6px,2px) skewX(5deg); filter:hue-rotate(90deg); }
-  10%{ transform:translate(6px,-2px) skewX(-3deg); filter:brightness(2); }
-  15%{ transform:translate(-3px,0); filter:none; }
-  90%{ transform:translate(4px,1px) skewX(-4deg); filter:hue-rotate(180deg); }
-  95%{ transform:translate(-4px,-1px) skewX(2deg); filter:brightness(1.5); }
-}
-@keyframes hackTitle {
-  0%,100%{ opacity:1; text-shadow:0 0 20px #ff3c3c,0 0 40px #ff3c3c; }
-  50%{ opacity:0.7; text-shadow:0 0 40px #ff3c3c,0 0 80px #ff3c3c,0 0 120px #ff0000; }
-}
-@keyframes flashBg {
-  0%,100%{ background:#0a0000; }
-  10%,30%,50%{ background:#1a0000; }
-  20%,40%{ background:#0a0000; }
-}
-.hacker-glitch2 { animation:glitch2 0.6s linear; }
-.blink-cursor { animation:blink 1s step-end infinite; }
-.victim-glitch { animation:victimGlitch 1.5s infinite; }
-.victim-flash { animation:flashBg 0.6s ease infinite; }
+@keyframes scanline{0%{top:-4%}100%{top:104%}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fadeInUp{0%{opacity:0;transform:translateY(24px) scale(.92)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.85)}}
+@keyframes pulseRed{0%,100%{box-shadow:0 0 24px #ff3c3c,0 0 60px #ff3c3c}50%{box-shadow:0 0 50px #ff3c3c,0 0 110px #ff3c3c,inset 0 0 30px #ff3c3c22}}
+@keyframes pulseGreen{0%,100%{box-shadow:0 0 24px #00ff41,0 0 60px #00ff41}50%{box-shadow:0 0 50px #00ff41,0 0 110px #00ff41,inset 0 0 30px #00ff4122}}
+@keyframes hackTitle{0%,100%{text-shadow:0 0 18px #ff3c3c,0 0 40px #ff3c3c}50%{text-shadow:0 0 36px #ff3c3c,0 0 80px #ff0000,0 0 120px #ff0000}}
+@keyframes glitchShake{0%,100%{transform:translate(0)}10%{transform:translate(-4px,2px) skewX(4deg)}20%{transform:translate(4px,-2px) skewX(-3deg)}30%{transform:translate(-2px,1px)}50%{transform:translate(0)}}
+@keyframes bgFlash{0%,100%{background:#0a0000}15%,45%{background:#1a0000}30%{background:#0a0000}}
+.blink-cursor{animation:blink 1s step-end infinite}
+.glitch-anim{animation:glitchShake .5s linear}
+.victim-bg{animation:bgFlash 1.6s ease infinite}
 `;
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
+// ─── Matrix canvas (reused in both views) ────────────────────────────────────
+function MatrixRain({ color, opacity = 0.18, speed = 55 }: { color: string; opacity?: number; speed?: number }) {
+  const cvs = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = cvs.current!;
+    const ctx = canvas.getContext("2d")!;
+    const fs = 13;
+    let cols: number[] = [];
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; cols = Array(~~(canvas.width / fs)).fill(0); };
+    resize();
+    window.addEventListener("resize", resize);
+    let raf = 0, last = 0;
+    const draw = (ts: number) => {
+      raf = requestAnimationFrame(draw);
+      if (ts - last < speed) return;
+      last = ts;
+      ctx.fillStyle = "rgba(0,0,0,0.82)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = color;
+      ctx.font = `${fs}px monospace`;
+      cols.forEach((y, i) => {
+        ctx.fillText(MATRIX_CHARS[~~(Math.random() * MATRIX_CHARS.length)], i * fs, y * fs);
+        cols[i] = y > canvas.height / fs && Math.random() > 0.975 ? 0 : y + 1;
+      });
+    };
+    raf = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+  }, [color, speed]);
+  return <canvas ref={cvs} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity }} />;
+}
+
+// ─── Entry point ──────────────────────────────────────────────────────────────
 export default function HackerSim() {
   const params = new URLSearchParams(window.location.search);
-  // Prank mode uses innocent params: ?n=NAME&s=1
-  const isPrank = params.get("s") === "1";
-  const prankName = params.get("n") || "ANONYMOUS";
-  if (isPrank) return <VictimView name={prankName} />;
+  const isVictim = params.get("s") === "1";
+  const victimName = params.get("n") || "ANONYMOUS";
+  if (isVictim) return <VictimView name={victimName} />;
   return <SimulatorView />;
 }
 
-// ─── Victim / Prank View ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// VICTIM VIEW
+// ═══════════════════════════════════════════════════════════════════════════════
 function VictimView({ name }: { name: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [lines, setLines] = useState<string[]>([]);
-  const [glitch, setGlitch] = useState(false);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [showTap, setShowTap] = useState(true);
-  const termRef = useRef<HTMLDivElement>(null);
-  const lineIdx = useRef(0);
-  const typingAudioRef = useRef<HTMLAudioElement | null>(null);
-  const threatAudioRef = useRef<HTMLAudioElement | null>(null);
-  const ttsSpokenRef = useRef(false);
+  const [lines, setLines]       = useState<string[]>([]);
+  const [glitch, setGlitch]     = useState(false);
+  const [showTap, setShowTap]   = useState(true);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertFading, setAlertFading] = useState(false);
+  const termRef   = useRef<HTMLDivElement>(null);
+  const lineIdx   = useRef(0);
+  const typingRef = useRef<HTMLAudioElement | null>(null);
+  const threatRef = useRef<HTMLAudioElement | null>(null);
+  const started   = useRef(false);
+  const base      = import.meta.env.BASE_URL ?? "/";
 
-  const base = import.meta.env.BASE_URL || "/";
-
-  const triggerAudioSequence = useCallback(() => {
-    if (audioUnlocked) return;
-    setAudioUnlocked(true);
+  const startSequence = useCallback(() => {
+    if (started.current) return;
+    started.current = true;
     setShowTap(false);
 
-    // 1. Typing sound — play for 5.5 seconds
-    const typing = new Audio(`${base}sounds/typing.mp3`);
-    typingAudioRef.current = typing;
-    typing.volume = 0.75;
-    typing.loop = true;
-    typing.play().catch(() => {});
+    // Show alert popup
+    setShowAlert(true);
+    setTimeout(() => setAlertFading(true),  3000);
+    setTimeout(() => { setShowAlert(false); setAlertFading(false); }, 3700);
 
-    // 2. After 5.5s → stop typing, play threat sound
-    setTimeout(() => {
-      typing.pause();
-      typing.currentTime = 0;
-      const threat = new Audio(`${base}sounds/threat.mp3`);
-      threatAudioRef.current = threat;
-      threat.volume = 0.9;
-      threat.loop = true;
-      threat.play().catch(() => {});
-    }, 5500);
-
-    // 3. TTS — speak after 3 seconds (overlaps with typing for drama)
-    setTimeout(() => {
-      if (ttsSpokenRef.current) return;
-      ttsSpokenRef.current = true;
-      if (!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      const msg = new SpeechSynthesisUtterance(
-        `Warning! Your system has been hacked by ${name}. ` +
-        `All your videos, photos, and contacts are being uploaded to a remote server right now. ` +
-        `Hacked by ${name}.`
-      );
-      msg.rate = 0.88;
-      msg.pitch = 0.75;
-      msg.volume = 1.0;
-      // Pick a deep/scary voice if available
-      const voices = window.speechSynthesis.getVoices();
-      const deepVoice = voices.find(v => v.lang.startsWith("en") && /male|david|alex|google/i.test(v.name));
-      if (deepVoice) msg.voice = deepVoice;
-      window.speechSynthesis.speak(msg);
-    }, 3000);
-  }, [audioUnlocked, base, name]);
+    runPrankSequence(base, name, { typing: typingRef, threat: threatRef });
+  }, [base, name]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
-    // Try autoplay on mount (works on desktop / some mobile)
-    setTimeout(() => triggerAudioSequence(), 400);
+    // Auto-attempt (works on desktop; mobile needs tap)
+    setTimeout(() => startSequence(), 500);
 
-    // Glitch pulse every 2.5s
-    const glitchTimer = setInterval(() => {
-      setGlitch(true);
-      setTimeout(() => setGlitch(false), 700);
-    }, 2500);
+    // Glitch pulses
+    const gl = setInterval(() => { setGlitch(true); setTimeout(() => setGlitch(false), 650); }, 2800);
 
-    // Stream lines FAST (180ms)
+    // Fast line stream
     const addLine = () => {
-      const l = HACK_LINES[lineIdx.current % HACK_LINES.length];
-      lineIdx.current++;
-      setLines(prev => [...prev.slice(-50), formatLine(l)]);
-      setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 10);
+      const l = fmt(HACK_LINES[lineIdx.current++ % HACK_LINES.length]);
+      setLines(p => [...p.slice(-55), l]);
+      setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 8);
     };
     addLine();
-    const lineTimer = setInterval(addLine, 180);
-
-    // Matrix canvas
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const fontSize = 14;
-    let cols: number[] = [];
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      cols = Array(Math.floor(canvas.width / fontSize)).fill(0);
-    };
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-    let raf: number;
-    let lastTs = 0;
-    const drawMatrix = (ts: number) => {
-      raf = requestAnimationFrame(drawMatrix);
-      if (ts - lastTs < 40) return;
-      lastTs = ts;
-      ctx.fillStyle = "rgba(10,0,0,0.82)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#ff3c3c";
-      ctx.font = `${fontSize}px monospace`;
-      cols.forEach((y, i) => {
-        const ch = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        ctx.fillText(ch, i * fontSize, y * fontSize);
-        cols[i] = y > canvas.height / fontSize && Math.random() > 0.975 ? 0 : y + 1;
-      });
-    };
-    raf = requestAnimationFrame(drawMatrix);
+    const li = setInterval(addLine, 160);
 
     return () => {
       document.body.style.overflow = "";
-      clearInterval(glitchTimer);
-      clearInterval(lineTimer);
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resizeCanvas);
-      typingAudioRef.current?.pause();
-      threatAudioRef.current?.pause();
+      clearInterval(gl);
+      clearInterval(li);
+      typingRef.current?.pause();
+      threatRef.current?.pause();
       window.speechSynthesis?.cancel();
     };
   }, []);
@@ -329,90 +240,79 @@ function VictimView({ name }: { name: string }) {
     <>
       <style>{STYLES}</style>
       <div
-        className={`${glitch ? "victim-glitch" : ""} victim-flash`}
-        style={{
-          position: "fixed", inset: 0, zIndex: 99999,
-          color: "#ff3c3c", fontFamily: "monospace", overflow: "hidden",
-        }}
-        onClick={triggerAudioSequence}
-        onTouchStart={triggerAudioSequence}
+        className={glitch ? "glitch-anim victim-bg" : "victim-bg"}
+        style={{ position: "fixed", inset: 0, zIndex: 99999, color: "#ff3c3c", fontFamily: "monospace", overflow: "hidden" }}
+        onClick={startSequence}
+        onTouchStart={startSequence}
       >
-        <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.28 }} />
+        {/* Matrix rain */}
+        <MatrixRain color="#ff2200" opacity={0.26} speed={40} />
 
         {/* Scanline */}
-        <div style={{
-          position: "absolute", left: 0, right: 0, height: "3px",
-          background: "rgba(255,60,60,0.22)",
-          animation: "scanline 3.5s linear infinite", zIndex: 1, pointerEvents: "none",
-        }} />
+        <div style={{ position:"absolute", left:0, right:0, height:"2px", background:"rgba(255,50,50,0.18)", animation:"scanline 3.5s linear infinite", zIndex:1, pointerEvents:"none" }} />
 
-        {/* CRT vignette */}
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)",
-        }} />
+        {/* Vignette */}
+        <div style={{ position:"absolute", inset:0, zIndex:1, pointerEvents:"none", background:"radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.78) 100%)" }} />
 
-        {/* Tap to enable audio overlay */}
+        {/* Tap overlay */}
         {showTap && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 20,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.6)",
-          }}>
-            <div style={{
-              textAlign: "center", color: "#ff3c3c", fontFamily: "monospace",
-              animation: "blink 1s step-end infinite",
-              fontSize: "clamp(16px,4vw,22px)", letterSpacing: "3px",
-            }}>
-              TAP ANYWHERE TO CONTINUE
+          <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.55)" }}>
+            <div style={{ textAlign:"center", color:"#ff3c3c", fontFamily:"monospace", animation:"blink 1s step-end infinite", fontSize:"clamp(15px,4vw,22px)", letterSpacing:"3px" }}>
+              ◉ TAP ANYWHERE TO CONTINUE
             </div>
           </div>
         )}
 
-        <div style={{ position: "relative", zIndex: 2, height: "100%", display: "flex", flexDirection: "column", padding: "12px 14px" }}>
-
-          {/* Warning header */}
+        {/* Red alert popup */}
+        {showAlert && (
           <div style={{
-            textAlign: "center", padding: "12px 8px",
-            borderBottom: "2px solid #ff3c3c",
-            animation: "hackTitle 1.4s ease-in-out infinite",
+            position:"absolute", inset:0, zIndex:25, display:"flex", alignItems:"center", justifyContent:"center",
+            background:"rgba(20,0,0,0.88)",
+            animation: alertFading ? "fadeOut 0.6s ease forwards" : "fadeInUp 0.4s ease",
           }}>
-            <div style={{ fontSize: "clamp(9px,2.2vw,13px)", letterSpacing: "4px", opacity: 0.65, marginBottom: 4 }}>
+            <div style={{
+              textAlign:"center", padding:"28px 32px", border:"2px solid #ff3c3c", borderRadius:18,
+              maxWidth:"85vw", animation:"pulseRed 1s ease infinite",
+            }}>
+              <div style={{ fontSize:48, lineHeight:1, filter:"drop-shadow(0 0 14px #ff3c3c)" }}>⚠</div>
+              <div style={{ fontSize:"clamp(14px,4vw,26px)", fontWeight:900, letterSpacing:"2px", marginTop:10, textShadow:"0 0 20px #ff3c3c" }}>
+                YOUR SYSTEM HAS BEEN<br/>HACKED BY {name.toUpperCase()}
+              </div>
+              <div style={{ fontSize:"clamp(9px,2vw,12px)", opacity:0.65, marginTop:8, letterSpacing:"2px" }}>
+                ALL PHOTOS AND VIDEOS ARE BEING ACCESSED
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main content */}
+        <div style={{ position:"relative", zIndex:2, height:"100%", display:"flex", flexDirection:"column", padding:"12px 14px" }}>
+          {/* Header */}
+          <div style={{ textAlign:"center", padding:"10px 8px", borderBottom:"2px solid #ff3c3c", animation:"hackTitle 1.4s ease-in-out infinite" }}>
+            <div style={{ fontSize:"clamp(8px,2vw,12px)", letterSpacing:"4px", opacity:0.6, marginBottom:4 }}>
               ⚠ CRITICAL SECURITY BREACH DETECTED ⚠
             </div>
-            <div style={{
-              fontSize: "clamp(16px,4.5vw,38px)", fontWeight: 900,
-              letterSpacing: "2px", lineHeight: 1.2,
-              textShadow: "0 0 20px #ff3c3c, 0 0 40px #ff0000",
-            }}>
-              YOUR SYSTEM HAS BEEN<br />
-              COMPROMISED BY {name.toUpperCase()}
+            <div style={{ fontSize:"clamp(15px,4.2vw,36px)", fontWeight:900, lineHeight:1.2, textShadow:"0 0 20px #ff3c3c,0 0 40px #ff0000" }}>
+              YOUR SYSTEM HAS BEEN<br/>HACKED BY {name.toUpperCase()}
             </div>
-            <div style={{ fontSize: "clamp(8px,1.7vw,11px)", opacity: 0.6, marginTop: 5, letterSpacing: "2px" }}>
-              ALL FILES · VIDEOS · PHOTOS · CONTACTS ARE BEING STOLEN
+            <div style={{ fontSize:"clamp(8px,1.6vw,11px)", opacity:0.55, marginTop:5, letterSpacing:"2px" }}>
+              FILES · VIDEOS · PHOTOS · CONTACTS ARE BEING STOLEN
             </div>
           </div>
 
           {/* Terminal */}
-          <div ref={termRef} style={{
-            flex: 1, overflowY: "auto", padding: "10px 2px",
-            fontSize: "clamp(9px,2vw,12px)", lineHeight: 1.65,
-          }}>
+          <div ref={termRef} style={{ flex:1, overflowY:"auto", padding:"10px 2px", fontSize:"clamp(9px,2vw,12px)", lineHeight:1.65 }}>
             {lines.map((l, i) => (
-              <div key={i} style={{ opacity: i === lines.length - 1 ? 1 : 0.68 }}>
+              <div key={i} style={{ opacity: i === lines.length - 1 ? 1 : 0.65 }}>
                 {l}
-                {i === lines.length - 1 && <span className="blink-cursor" style={{ marginLeft: 2 }}>█</span>}
+                {i === lines.length - 1 && <span className="blink-cursor" style={{ marginLeft:2 }}>█</span>}
               </div>
             ))}
           </div>
         </div>
 
         {/* Watermark */}
-        <div style={{
-          position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)",
-          fontSize: 10, opacity: 0.25, letterSpacing: "2px", zIndex: 3, pointerEvents: "none",
-          color: "#ff3c3c", fontFamily: "monospace",
-        }}>
+        <div style={{ position:"absolute", bottom:8, left:"50%", transform:"translateX(-50%)", fontSize:10, opacity:0.22, letterSpacing:"2px", zIndex:3, pointerEvents:"none", fontFamily:"monospace", color:"#ff3c3c" }}>
           Pocket Tools Kit
         </div>
       </div>
@@ -420,97 +320,127 @@ function VictimView({ name }: { name: string }) {
   );
 }
 
-// ─── Simulator View ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// SIMULATOR / CREATOR VIEW
+// ═══════════════════════════════════════════════════════════════════════════════
 function SimulatorView() {
-  const [theme, setTheme] = useState<Theme>("green");
-  const [lines, setLines] = useState<string[]>(["> System initialized. Ready to hack...", "> Tap / click anywhere to stream code."]);
-  const [modal, setModal] = useState<"granted" | "denied" | null>(null);
-  const [modalFading, setModalFading] = useState(false);
-  const [autoHack, setAutoHack] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [theme, setTheme]         = useState<Theme>("green");
+  const [lines, setLines]         = useState<string[]>(["> System initialized.", "> Click / tap terminal to stream code."]);
+  const [autoHack, setAutoHack]   = useState(false);
+  const [muted, setMuted]         = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [hackerName, setHackerName] = useState("");
-  const [prank, setPrank] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [prank, setPrank]         = useState("");
+  const [copied, setCopied]       = useState(false);
   const [glitching, setGlitching] = useState(false);
-  const lineIdx = useRef(0);
-  const termRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<AudioContext | null>(null);
-  const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastAddRef = useRef(0);
+  const [modal, setModal]         = useState<"granted"|"denied"|null>(null);
+  const [modalFading, setModalFading] = useState(false);
+  const [testAlert, setTestAlert] = useState(false);
+  const [testAlertFading, setTestAlertFading] = useState(false);
 
+  const lineIdx    = useRef(0);
+  const termRef    = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const audioCtxRef  = useRef<AudioContext | null>(null);
+  const autoRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastAdd    = useRef(0);
+  const typingRef  = useRef<HTMLAudioElement | null>(null);
+  const threatRef  = useRef<HTMLAudioElement | null>(null);
+  const testRunning = useRef(false);
+
+  const base = import.meta.env.BASE_URL ?? "/";
   const t = THEMES[theme];
-  const ensureAudio = () => {
-    if (!audioRef.current) audioRef.current = createAudioCtx();
-    return audioRef.current;
+
+  const ensureCtx = () => {
+    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    return audioCtxRef.current;
+  };
+  const beep = (freq = 300, dur = 0.04, vol = 0.05) => {
+    if (muted) return;
+    try {
+      const ctx = ensureCtx();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      o.start(); o.stop(ctx.currentTime + dur);
+    } catch {}
   };
 
   const addLine = useCallback((burst = false) => {
     const now = Date.now();
-    if (!burst && now - lastAddRef.current < 120) return;
-    lastAddRef.current = now;
-    const l = HACK_LINES[lineIdx.current % HACK_LINES.length];
-    lineIdx.current++;
-    setLines(prev => [...prev.slice(-60), formatLine(l)]);
-    setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 10);
-    if (!muted) {
-      try { playBeep(ensureAudio(), 200 + Math.random() * 400, 0.03, 0.04); } catch {}
-    }
+    if (!burst && now - lastAdd.current < 120) return;
+    lastAdd.current = now;
+    const l = fmt(HACK_LINES[lineIdx.current++ % HACK_LINES.length]);
+    setLines(p => [...p.slice(-60), l]);
+    setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 8);
+    beep(180 + Math.random() * 380, 0.035, 0.045);
   }, [muted]);
 
   useEffect(() => {
-    if (autoHack) {
-      autoRef.current = setInterval(() => addLine(true), 280);
-    } else {
-      if (autoRef.current) clearInterval(autoRef.current);
-    }
+    if (autoHack) { autoRef.current = setInterval(() => addLine(true), 260); }
+    else { if (autoRef.current) clearInterval(autoRef.current); }
     return () => { if (autoRef.current) clearInterval(autoRef.current); };
   }, [autoHack, addLine]);
 
   useEffect(() => {
     if (!modal) return;
-    const t1 = setTimeout(() => setModalFading(true), 2500);
-    const t2 = setTimeout(() => { setModal(null); setModalFading(false); }, 3100);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const a = setTimeout(() => setModalFading(true), 2500);
+    const b = setTimeout(() => { setModal(null); setModalFading(false); }, 3200);
+    return () => { clearTimeout(a); clearTimeout(b); };
   }, [modal]);
 
-  const triggerModal = (type: "granted" | "denied") => {
-    setGlitching(true);
-    setTimeout(() => setGlitching(false), 600);
-    setModal(type);
-    setModalFading(false);
+  const triggerModal = (type: "granted"|"denied") => {
+    setGlitching(true); setTimeout(() => setGlitching(false), 550);
+    setModal(type); setModalFading(false);
     if (!muted) {
-      try {
-        const ctx = ensureAudio();
-        if (type === "granted") playGranted(ctx); else playAlarmSynth(ctx);
-      } catch {}
+      const ctx = ensureCtx();
+      (type === "granted"
+        ? [523,659,784,1047] : [880,1320,660,1100]
+      ).forEach((f, i) => setTimeout(() => beep(f, 0.18, 0.12), i * 100));
     }
-    const msg = type === "granted"
-      ? "> ✓ ACCESS GRANTED — Welcome to the system."
-      : "> ✗ ACCESS DENIED — Lockout triggered.";
-    setLines(prev => [...prev.slice(-60), msg]);
-    setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 10);
+    setLines(p => [...p.slice(-60), type === "granted"
+      ? "> ✓ ACCESS GRANTED — system unlocked." : "> ✗ ACCESS DENIED — lockout triggered."]);
+    setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 8);
+  };
+
+  const testPrank = () => {
+    if (testRunning.current) return;
+    testRunning.current = true;
+    ensureCtx();
+    const name = hackerName.trim() || "ANONYMOUS";
+
+    // Show red alert popup
+    setTestAlert(true);
+    setTestAlertFading(false);
+    setTimeout(() => setTestAlertFading(true), 3000);
+    setTimeout(() => { setTestAlert(false); setTestAlertFading(false); testRunning.current = false; }, 3700);
+
+    // Stop any running audio
+    typingRef.current?.pause();
+    threatRef.current?.pause();
+    window.speechSynthesis?.cancel();
+
+    if (!muted) {
+      runPrankSequence(base, name, { typing: typingRef, threat: threatRef });
+    }
+    setLines(p => [...p.slice(-60), `> [TEST] Prank sequence started for "${name}"`]);
+    setTimeout(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, 8);
   };
 
   const generatePrank = () => {
     const name = hackerName.trim() || "ANONYMOUS";
-    // Innocent-looking URL — no "hacker/hacked/prank" words
-    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "") + "/tools/view";
-    setPrank(`${base}?n=${encodeURIComponent(name)}&s=1`);
+    const origin = window.location.origin;
+    const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+    setPrank(`${origin}${basePath}/tools/view?n=${encodeURIComponent(name)}&s=1`);
   };
 
   const copyPrank = () => {
     if (!prank) return;
     navigator.clipboard.writeText(prank);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const toggleFullscreen = () => {
-    if (!fullscreen) { containerRef.current?.requestFullscreen?.(); }
-    else { document.exitFullscreen?.(); }
-    setFullscreen(f => !f);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
@@ -518,189 +448,166 @@ function SimulatorView() {
       toolId="hacker"
       instructions={
         <ul className="list-disc pl-5 space-y-1 text-xs">
-          <li><strong>Click / Tap</strong> the terminal to stream hacker code instantly.</li>
-          <li>Toggle <strong>Auto Hack</strong> for hands-free streaming.</li>
-          <li>Enter a name → Generate Prank Link → send to a friend 😈</li>
-          <li>The prank link looks innocent — no "hacker" words visible to victim!</li>
+          <li><strong>Click / Tap</strong> the terminal to add code lines instantly.</li>
+          <li>Toggle <strong>Auto Hack</strong> for continuous streaming.</li>
+          <li>Enter a name → <strong>Generate Link</strong> → victim gets full audio + TTS experience 😈</li>
+          <li><strong>Test Prank</strong> button lets you preview the full sound sequence yourself.</li>
         </ul>
       }
     >
       <style>{STYLES}</style>
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {(["green", "cyan", "red"] as Theme[]).map((th) => (
+      {/* Test alert popup (creator view) */}
+      {testAlert && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:9999,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          background:"rgba(20,0,0,0.85)",
+          animation: testAlertFading ? "fadeOut 0.6s ease forwards" : "fadeInUp 0.4s ease",
+        }}>
+          <div style={{
+            textAlign:"center", padding:"28px 36px", border:"2px solid #ff3c3c", borderRadius:18,
+            maxWidth:"90vw", fontFamily:"monospace", animation:"pulseRed 1s ease infinite",
+          }}>
+            <div style={{ fontSize:52, lineHeight:1, filter:"drop-shadow(0 0 14px #ff3c3c)" }}>⚠</div>
+            <div style={{ fontSize:"clamp(14px,4vw,26px)", fontWeight:900, letterSpacing:"2px", marginTop:10, color:"#ff3c3c", textShadow:"0 0 20px #ff3c3c" }}>
+              YOUR SYSTEM HAS BEEN<br/>HACKED BY {(hackerName.trim() || "ANONYMOUS").toUpperCase()}
+            </div>
+            <div style={{ fontSize:11, opacity:0.6, marginTop:8, letterSpacing:"2px", color:"#ff3c3c" }}>
+              ALL PHOTOS AND VIDEOS ARE BEING ACCESSED
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Controls row */}
+      <div className="flex flex-wrap gap-2 mb-3 items-center">
+        {(["green","cyan","red"] as Theme[]).map(th => (
           <button key={th} onClick={() => setTheme(th)}
-            title={th === "green" ? "Matrix Green" : th === "cyan" ? "Cyber Cyan" : "Danger Red"}
-            style={{
-              width: 26, height: 26, borderRadius: "50%",
-              background: THEMES[th].primary,
-              border: theme === th ? "3px solid white" : "3px solid transparent",
-              cursor: "pointer", transition: "border 0.2s",
-              boxShadow: theme === th ? `0 0 10px ${THEMES[th].primary}` : "none",
-            }}
+            style={{ width:24, height:24, borderRadius:"50%", background:THEMES[th].primary, cursor:"pointer", border: theme===th ? "3px solid white":"3px solid transparent", boxShadow: theme===th ? `0 0 10px ${THEMES[th].primary}`:"none", transition:"all .2s" }}
           />
         ))}
-        <Button size="sm" variant="outline" onClick={() => setMuted(m => !m)} className="gap-1 h-7 text-xs">
-          {muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-          {muted ? "Unmute" : "Mute"}
+        <Button size="sm" variant="outline" onClick={() => setMuted(m=>!m)} className="gap-1 h-7 text-xs">
+          {muted ? <VolumeX className="h-3 w-3"/> : <Volume2 className="h-3 w-3"/>}
+          {muted ? "Unmute":"Mute"}
         </Button>
-        <Button size="sm" variant="outline" onClick={toggleFullscreen} className="gap-1 h-7 text-xs">
-          {fullscreen ? <Minimize className="h-3 w-3" /> : <Maximize className="h-3 w-3" />}
+        <Button size="sm" variant="outline" onClick={() => { if (!fullscreen) containerRef.current?.requestFullscreen?.(); else document.exitFullscreen?.(); setFullscreen(f=>!f); }} className="gap-1 h-7 text-xs">
+          {fullscreen ? <Minimize className="h-3 w-3"/> : <Maximize className="h-3 w-3"/>}
           Fullscreen
         </Button>
-        <Button size="sm" onClick={() => { setAutoHack(a => !a); ensureAudio(); }}
-          className="gap-1 h-7 text-xs"
-          style={{ background: autoHack ? "#ef4444" : undefined }}>
-          {autoHack ? <ZapOff className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
-          {autoHack ? "Stop Auto" : "Auto Hack"}
+        <Button size="sm" onClick={() => { setAutoHack(a=>!a); ensureCtx(); }}
+          className="gap-1 h-7 text-xs" style={{ background: autoHack ? "#ef4444":undefined }}>
+          {autoHack ? <ZapOff className="h-3 w-3"/> : <Zap className="h-3 w-3"/>}
+          {autoHack ? "Stop Auto":"Auto Hack"}
         </Button>
       </div>
 
       {/* Terminal */}
-      <div ref={containerRef} className={glitching ? "hacker-glitch2" : ""}
-        onClick={() => { addLine(); ensureAudio(); }}
-        onTouchStart={() => { addLine(); ensureAudio(); }}
+      <div ref={containerRef} className={glitching ? "glitch-anim" : ""}
+        onClick={() => { addLine(); ensureCtx(); }}
+        onTouchStart={() => { addLine(); ensureCtx(); }}
         style={{
-          position: "relative", borderRadius: 12, overflow: "hidden",
-          background: t.bg, border: `1.5px solid ${t.primary}`,
-          boxShadow: `0 0 18px ${t.primary}44, inset 0 0 30px ${t.dim}`,
-          cursor: "crosshair", userSelect: "none",
-          height: 360, transition: "box-shadow 0.3s",
+          position:"relative", borderRadius:12, overflow:"hidden",
+          background: t.bg, border:`1.5px solid ${t.primary}`,
+          boxShadow:`0 0 18px ${t.primary}44,inset 0 0 28px ${t.dim}`,
+          cursor:"crosshair", userSelect:"none", height:340,
         }}>
-        <MatrixCanvas theme={theme} active={!autoHack} />
-        <div style={{
-          position: "absolute", left: 0, right: 0, height: "2px",
-          background: `${t.primary}20`,
-          animation: "scanline 5s linear infinite", zIndex: 1, pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)",
-        }} />
+        <MatrixRain color={t.primary} opacity={0.16} />
+        <div style={{ position:"absolute", left:0, right:0, height:"2px", background:`${t.primary}18`, animation:"scanline 5s linear infinite", zIndex:1, pointerEvents:"none" }} />
+        <div style={{ position:"absolute", inset:0, zIndex:1, pointerEvents:"none", background:"radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.55) 100%)" }} />
+
         {/* Title bar */}
-        <div style={{
-          position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 6,
-          padding: "8px 14px", borderBottom: `1px solid ${t.primary}44`, background: `${t.dim}99`,
-        }}>
-          {["#ef4444","#f59e0b","#22c55e"].map((c,i)=>(
-            <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />
-          ))}
-          <span style={{ color: t.primary, fontSize: 11, letterSpacing: "2px", marginLeft: 8 }}>
-            HACKER TERMINAL v4.2 ● ONLINE
-          </span>
+        <div style={{ position:"relative", zIndex:2, display:"flex", alignItems:"center", gap:6, padding:"7px 12px", borderBottom:`1px solid ${t.primary}33`, background:`${t.dim}88` }}>
+          {["#ef4444","#f59e0b","#22c55e"].map((c,i)=><div key={i} style={{ width:10, height:10, borderRadius:"50%", background:c }} />)}
+          <span style={{ color:t.primary, fontSize:11, letterSpacing:"2px", marginLeft:6 }}>HACKER TERMINAL v4.2 ● ONLINE</span>
         </div>
-        {/* Output */}
-        <div ref={termRef} style={{
-          position: "relative", zIndex: 2,
-          height: "calc(100% - 38px)", overflowY: "auto",
-          padding: "10px 14px", fontFamily: "monospace", fontSize: 12, lineHeight: 1.7,
-          color: t.primary,
-        }}>
+
+        {/* Lines */}
+        <div ref={termRef} style={{ position:"relative", zIndex:2, height:"calc(100% - 36px)", overflowY:"auto", padding:"8px 12px", fontFamily:"monospace", fontSize:12, lineHeight:1.7, color:t.primary }}>
           {lines.map((line, i) => (
-            <div key={i} style={{
-              opacity: i === lines.length - 1 ? 1 : 0.72,
-              textShadow: i === lines.length - 1 ? t.glow : "none",
-            }}>
+            <div key={i} style={{ opacity: i===lines.length-1?1:0.68, textShadow: i===lines.length-1?t.glow:"none" }}>
               {line}
-              {i === lines.length - 1 && (
-                <span className="blink-cursor" style={{ color: t.primary, marginLeft: 2 }}>█</span>
-              )}
+              {i===lines.length-1 && <span className="blink-cursor" style={{ color:t.primary, marginLeft:2 }}>█</span>}
             </div>
           ))}
         </div>
-        <div style={{
-          position: "absolute", bottom: 10, right: 14, zIndex: 2,
-          fontSize: 10, color: t.primary, opacity: 0.3, letterSpacing: "1px", pointerEvents: "none",
-        }}>TAP TO TYPE</div>
+        <div style={{ position:"absolute", bottom:8, right:12, zIndex:2, fontSize:9, color:t.primary, opacity:0.28, pointerEvents:"none", letterSpacing:"1px" }}>TAP TO TYPE</div>
 
-        {/* Modal */}
+        {/* ACCESS modal */}
         {modal && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 10,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: modal === "granted" ? "rgba(0,30,0,0.85)" : "rgba(30,0,0,0.85)",
-            animation: modalFading ? "fadeOut 0.5s ease forwards" : "fadeInScale 0.3s ease",
-          }}>
-            <div style={{
-              textAlign: "center", padding: "32px 40px",
-              border: `2px solid ${modal === "granted" ? "#00ff41" : "#ff3c3c"}`,
-              borderRadius: 16, fontFamily: "monospace",
-              animation: modal === "granted" ? "pulseGreen 1.5s ease infinite" : "pulseRed 0.8s ease infinite",
-            }}>
-              <div style={{ fontSize: 56, lineHeight: 1,
-                filter: `drop-shadow(0 0 12px ${modal === "granted" ? "#00ff41" : "#ff3c3c"})` }}>
-                {modal === "granted" ? "✓" : "✗"}
+          <div style={{ position:"absolute", inset:0, zIndex:10, display:"flex", alignItems:"center", justifyContent:"center", background: modal==="granted"?"rgba(0,22,0,0.88)":"rgba(22,0,0,0.88)", animation: modalFading?"fadeOut .5s ease forwards":"fadeInUp .35s ease" }}>
+            <div style={{ textAlign:"center", padding:"28px 36px", border:`2px solid ${modal==="granted"?"#00ff41":"#ff3c3c"}`, borderRadius:16, fontFamily:"monospace", animation: modal==="granted"?"pulseGreen 1.5s ease infinite":"pulseRed .9s ease infinite" }}>
+              <div style={{ fontSize:52, lineHeight:1, filter:`drop-shadow(0 0 12px ${modal==="granted"?"#00ff41":"#ff3c3c"})` }}>{modal==="granted"?"✓":"✗"}</div>
+              <div style={{ fontSize:22, fontWeight:900, letterSpacing:"3px", marginTop:8, color:modal==="granted"?"#00ff41":"#ff3c3c", textShadow:`0 0 20px ${modal==="granted"?"#00ff41":"#ff3c3c"}` }}>
+                {modal==="granted"?"ACCESS GRANTED":"ACCESS DENIED"}
               </div>
-              <div style={{
-                fontSize: 24, fontWeight: 900, letterSpacing: "3px", marginTop: 8,
-                color: modal === "granted" ? "#00ff41" : "#ff3c3c",
-                textShadow: modal === "granted" ? "0 0 20px #00ff41" : "0 0 20px #ff3c3c",
-              }}>
-                {modal === "granted" ? "ACCESS GRANTED" : "ACCESS DENIED"}
-              </div>
-              <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, letterSpacing: "2px" }}>
-                {modal === "granted" ? "AUTHENTICATION SUCCESSFUL" : "LOCKOUT TRIGGERED · ALERT SENT"}
+              <div style={{ fontSize:10, opacity:0.65, marginTop:5, letterSpacing:"2px" }}>
+                {modal==="granted"?"AUTHENTICATION SUCCESSFUL":"LOCKOUT TRIGGERED · ALERT SENT"}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Access buttons */}
-      <div className="flex gap-3 mt-3">
-        <button onClick={(e) => { e.stopPropagation(); triggerModal("granted"); }}
-          style={{
-            flex: 1, padding: "10px", borderRadius: 10, border: "1.5px solid #00ff41",
-            background: "#001a00", color: "#00ff41", fontFamily: "monospace",
-            fontSize: 13, fontWeight: 700, letterSpacing: "2px", cursor: "pointer",
-          }}
-          onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 16px #00ff41")}
-          onMouseLeave={e=>(e.currentTarget.style.boxShadow="none")}>
+      {/* Access + Test buttons */}
+      <div className="flex gap-2 mt-3 flex-wrap">
+        <button onClick={(e)=>{e.stopPropagation();triggerModal("granted");}}
+          style={{ flex:1, minWidth:120, padding:"9px 4px", borderRadius:10, border:"1.5px solid #00ff41", background:"#001800", color:"#00ff41", fontFamily:"monospace", fontSize:12, fontWeight:700, letterSpacing:"2px", cursor:"pointer" }}
+          onMouseEnter={e=>e.currentTarget.style.boxShadow="0 0 14px #00ff41"}
+          onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
           ✓ ACCESS GRANTED
         </button>
-        <button onClick={(e) => { e.stopPropagation(); triggerModal("denied"); }}
-          style={{
-            flex: 1, padding: "10px", borderRadius: 10, border: "1.5px solid #ff3c3c",
-            background: "#1a0000", color: "#ff3c3c", fontFamily: "monospace",
-            fontSize: 13, fontWeight: 700, letterSpacing: "2px", cursor: "pointer",
-          }}
-          onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 16px #ff3c3c")}
-          onMouseLeave={e=>(e.currentTarget.style.boxShadow="none")}>
+        <button onClick={(e)=>{e.stopPropagation();triggerModal("denied");}}
+          style={{ flex:1, minWidth:120, padding:"9px 4px", borderRadius:10, border:"1.5px solid #ff3c3c", background:"#180000", color:"#ff3c3c", fontFamily:"monospace", fontSize:12, fontWeight:700, letterSpacing:"2px", cursor:"pointer" }}
+          onMouseEnter={e=>e.currentTarget.style.boxShadow="0 0 14px #ff3c3c"}
+          onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
           ✗ ACCESS DENIED
         </button>
       </div>
 
-      {/* Prank link generator */}
-      <div className="mt-5 rounded-xl border p-4 space-y-3 bg-muted/30">
+      {/* ─── Prank Link Generator ────────────────────────────────────────── */}
+      <div className="mt-4 rounded-xl border p-4 space-y-4 bg-muted/30">
         <p className="text-sm font-semibold flex items-center gap-2">
-          <Link2 className="h-4 w-4" /> Generate Prank Link
+          <Link2 className="h-4 w-4" /> Prank Link Generator
         </p>
-        <p className="text-xs text-muted-foreground">
-          The generated link looks completely normal — no suspicious words. When your friend opens it, they get the full experience: typing sounds, alarm, and a voice message! 😈
-        </p>
-        <div className="flex gap-2">
+
+        {/* Name input */}
+        <div className="space-y-1.5">
+          <Label htmlFor="hname" className="text-xs">Enter Hacker Name</Label>
           <Input
-            placeholder="Enter your name (e.g. Shadow404)"
+            id="hname"
+            placeholder="e.g. Shadow404, DarkHunter, ..."
             value={hackerName}
-            onChange={(e) => setHackerName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && generatePrank()}
+            onChange={e => { setHackerName(e.target.value); setPrank(""); }}
+            onKeyDown={e => e.key==="Enter" && generatePrank()}
             className="font-mono"
           />
-          <Button onClick={generatePrank} className="shrink-0">Generate</Button>
         </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={generatePrank} className="gap-1.5">
+            <Link2 className="h-4 w-4" /> Generate Link
+          </Button>
+          <Button variant="outline" onClick={testPrank} className="gap-1.5">
+            <Play className="h-4 w-4" /> Test Prank Sound
+          </Button>
+        </div>
+
+        {/* Generated link */}
         {prank && (
           <div className="space-y-2">
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <input readOnly value={prank}
-                className="flex-1 font-mono text-xs border rounded-lg px-3 py-2 bg-muted truncate" />
-              <Button size="sm" variant="outline" onClick={copyPrank} className="gap-1 shrink-0">
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                {copied ? "Copied!" : "Copy"}
+                className="flex-1 font-mono text-xs border rounded-lg px-3 py-2 bg-muted truncate min-w-0" />
+              <Button size="sm" variant="outline" onClick={copyPrank} className="gap-1.5 shrink-0">
+                {copied ? <Check className="h-4 w-4 text-green-500"/> : <Copy className="h-4 w-4"/>}
+                {copied ? "Copied!":"Copy Link"}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              🎭 Send via WhatsApp or Telegram. Victim gets: keyboard typing sounds (5s) → alarm → voice saying "Hacked by {hackerName || "you"}!"
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              🎭 Send this via WhatsApp or Telegram. When opened:<br/>
+              <strong>5s typing sound</strong> → <strong>alarm</strong> → <strong>voice: "Hacked by {hackerName.trim() || "you"}. All photos and videos accessed."</strong>
             </p>
           </div>
         )}
