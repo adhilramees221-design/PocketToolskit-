@@ -3,6 +3,7 @@
     "PORT": "3000"
   },
   "rewrites": [
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    { "source": "/tools/view", "destination": "/view.html" },
+    { "source": "/((?!assets/|view\\.html).*)", "destination": "/index.html" }
   ]
 }

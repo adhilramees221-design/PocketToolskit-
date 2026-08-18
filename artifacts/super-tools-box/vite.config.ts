@@ -29,6 +29,28 @@ function toolCountPlugin(): Plugin {
   };
 }
 
+/**
+ * Dev-server parity with the Vercel rewrite: serve view.html (neutral meta
+ * tags) for the /tools/view route instead of the SPA's index.html.
+ */
+function viewHtmlRewritePlugin(base: string): Plugin {
+  return {
+    name: 'view-html-rewrite',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const url = req.url ?? '';
+        const pathOnly = url.split('?')[0];
+        // The Replit preview proxy may forward the path with or without the
+        // artifact prefix, so match any path ending in /tools/view.
+        if (pathOnly.endsWith('/tools/view')) {
+          req.url = `${base.replace(/\/$/, '')}/view.html`;
+        }
+        next();
+      });
+    },
+  };
+}
+
 // PORT — required on Replit, not needed for Vercel builds
 const rawPort = process.env.PORT;
 const port = rawPort ? Number(rawPort) : 3000;
@@ -42,6 +64,7 @@ export default defineConfig(async () => ({
   base: basePath,
   plugins: [
     toolCountPlugin(),
+    viewHtmlRewritePlugin(basePath),
     react(),
     tailwindcss(),
     ...(isReplit
@@ -78,6 +101,12 @@ export default defineConfig(async () => ({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(import.meta.dirname, 'index.html'),
+        view: path.resolve(import.meta.dirname, 'view.html'),
+      },
+    },
   },
   server: {
     port,
