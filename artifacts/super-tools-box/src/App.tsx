@@ -47,6 +47,7 @@ import BillWheel from '@/pages/tools/BillWheel';
 import FlagScore from '@/pages/tools/FlagScore';
 import OttCalc from '@/pages/tools/OttCalc';
 import HackerSim from '@/pages/tools/HackerSim';
+import TapSpeedTest from '@/pages/tools/TapSpeedTest';
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ function Router() {
         <Route path="/tools/ott-calc" component={OttCalc} />
         <Route path="/tools/hacker" component={HackerSim} />
         <Route path="/tools/view" component={HackerSim} />
+        <Route path="/tools/tap-speed" component={TapSpeedTest} />
 
         <Route component={NotFound} />
       </Switch>

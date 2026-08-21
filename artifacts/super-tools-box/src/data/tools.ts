@@ -28,7 +28,8 @@ import {
   Users,
   Flag,
   Tv,
-  Terminal
+  Terminal,
+  Hand
 } from "lucide-react";
 
 export type ToolCategory = "Media" | "Utilities" | "Documents" | "Security" | "Calculators";
@@ -285,5 +286,13 @@ export const toolsData: ToolItem[] = [
     category: "Utilities",
     icon: Terminal,
     color: "bg-emerald-700",
+  },
+  {
+    id: "tap-speed",
+    title: { en: "Tap Speed Test ⚡", ml: "ടാപ് സ്പീഡ് ടെസ്റ്റ് ⚡" },
+    description: { en: "Test how fast you can tap. Track CPS and download your score card.", ml: "എത്ര വേഗത്തിൽ ടാപ് ചെയ്യാം എന്ന് നോക്കൂ. CPS സ്കോർ കാർഡായി ഡൗൺലോഡ് ചെയ്യാം." },
+    category: "Utilities",
+    icon: Hand,
+    color: "bg-sky-600",
   },
 ];
